@@ -8,6 +8,7 @@ let actualWidth = -1;
 let actualHeight = -1;
 
 // Player
+let paused = false;
 let playerX = 0;
 let playerY = 0;
 let playerVel = 0;
@@ -91,17 +92,32 @@ document.addEventListener("mouseup", e => { touch = false; SetTouchPos(e); }, fa
 document.addEventListener("touchstart", e => { touch = true; SetTouchPos(e); e.preventDefault(); }, false );
 document.addEventListener("touchend", e => { touch = false; SetTouchPos(e); e.preventDefault(); }, false );
 document.addEventListener("touchcancel", e => { touch = false; SetTouchPos(e); e.preventDefault(); }, false );
-document.addEventListener("keydown", e =>
-{
-    if (e.altKey && e.code === "32")
-    {
+document.addEventListener("keydown", e => {
+    if (e.altKey && e.code === "32") {
         localStorage.setItem("ohflip.maxHeightFt", 0);
         localStorage.setItem("ohflip.maxTotalFlips", 0);
         localStorage.setItem("ohflip.goalIdx", 0);
         goalIdx = 0;
     }
+    if (e.code === "Space") {
+        if (!touch) {
+            touch = true;
+            touchX = canvas.width / 2;
+            touchY = canvas.height - 10;
+        }
+        e.preventDefault();
+    }
+    if (e.code === "Escape") {
+        paused = !paused;
+        e.preventDefault();
+    }
 });
-
+document.addEventListener("keyup", e => {
+    if (e.code === "Space") {
+        touch = false;
+        e.preventDefault();
+    }
+});
 function SetTouchPos(event)
 {
     touchX = event.pageX - canvas.offsetLeft;
@@ -138,6 +154,11 @@ function Reset()
 
 function GameLoop(curTime)
 {
+    if (paused) {
+    DrawUI(); 
+    window.requestAnimationFrame(GameLoop);
+    return;
+    }
     let dt = Math.min((curTime - (lastFrameTime || curTime)) / 1000.0, 0.2);  // Cap to 200ms (5fps)
     lastFrameTime = curTime;
 
@@ -602,6 +623,30 @@ function DrawUI()
     });
 
     ctx.restore();
+    if (paused) {
+        // Get current and high scores
+        let heightFt = Math.floor(playerY / 40.0);
+        let maxHeightFt = localStorage.getItem("ohflip.maxHeightFt") || 0;
+        let maxTotalFlips = localStorage.getItem("ohflip.maxTotalFlips") || 0;
+        
+        // Draw "Paused" with black outline
+        DrawText("Paused", canvas.width / 2, canvas.height / 2, 0, 80, "center", "#000");
+        DrawText("Paused", canvas.width / 2 - 4, canvas.height / 2 - 4, 0, 80, "center", "#FF9600");
+        
+        // Draw "Press Escape to resume" with black outline
+        DrawText("Press Escape to resume", canvas.width / 2, canvas.height / 2 + 60, 0, 24, "center", "#000");
+        DrawText("Press Escape to resume", canvas.width / 2 - 2, canvas.height / 2 + 58, 0, 24, "center", "#FFF");
+        
+        // Draw current scores with black outline
+        let currentScoreText = `Height: ${heightFt} ft | Flips: ${totalFlips}`;
+        DrawText(currentScoreText, canvas.width / 2, canvas.height / 2 + 100, 0, 20, "center", "#000");
+        DrawText(currentScoreText, canvas.width / 2 - 2, canvas.height / 2 + 98, 0, 20, "center", "#FFF");
+        
+        // Draw high scores with black outline
+        let highScoreText = `Best Height: ${maxHeightFt} ft | Best Flips: ${maxTotalFlips}`;
+        DrawText(highScoreText, canvas.width / 2, canvas.height / 2 + 130, 0, 20, "center", "#000");
+        DrawText(highScoreText, canvas.width / 2 - 2, canvas.height / 2 + 128, 0, 20, "center", "#AAA");
+    }
 }
 
 function AddPopup(x, y, text, color, smallSize)
